@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Impact of Tournaments, Players, and Earnings Globally</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #map {
+            width: 70%;
+            border: 2px solid black;
+        }
+
+        #charts {
+            width: 40%;
+            padding: 10px;
+        }
+
+        .bubble {
+            opacity: 0.7;
+            stroke: black;
+            stroke-width: 1px;
+        }
+
+        .country {
+            fill: #e0e0e0;
+            stroke: #fff;
+            stroke-width: 0.5px;
+        }
+
+        #info {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            width: auto;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls">
+        <label for="countrySelect">Select Country:</label>
+        <br>
+        <select id="countrySelect">
+            <option value="all">All</option>
+        </select>
+        <br>
+        <label for="chartSelect">Select Chart:</label>
+        <select id="chartSelect">
+            <option value="chart1">Distribution of Games by Genre</option>
+            <option value="chart2">Distribution of Total Money Across Games</option>
+            <option value="chart3">Trends in Game Releases Over the Years</option>
+            <option value="chart4">Country Representation for the Most Popular Games</option>
+            <option value="chart5">Tournaments vs Earnings</option>
+        </select>
+    </div>
+    <div id="map"></div>
+    <div id="charts">
+        <div id="chart1" class="chart-container"></div>
+        <div id="chart2" class="chart-container"></div>
+        <div id="chart3" class="chart-container"></div>
+        <div id="chart4" class="chart-container"></div>
+        <div id="chart5" class="chart-container"></div>
+    </div>
+    <div id="info"></div>
+    <script>
+        const countryCoordinates = {
+            "United States": [-95.7129, 37.0902],
+            "Viet Nam": [108.2772, 14.0583],
+            "China": [104.1954, 35.8617],
+            "Germany": [10.4515, 51.1657],
+            "Taiwan, Republic of China": [121.5654, 25.0330],
+            "Russian Federation": [105.3188, 61.5240],
+            "Singapore": [103.8198, 1.3521],
+            "Italy": [12.5674, 41.8719],
+            "Czech Republic": [15.4729, 49.8175],
+            "Denmark": [9.5018, 56.2639],
+            "France": [2.2137, 46.6034],
+            "Australia": [133.7751, -25.2744],
+            "Korea, Republic of": [127.7669, 35.9078],
+            "Netherlands": [5.2913, 52.1326],
+            "Japan": [138.2529, 36.2048],
+            "Canada": [-106.3468, 56.1304],
+            "Sweden": [18.6435, 60.1282],
+            "United Kingdom": [-3.435973, 55.378051],
+            "Spain": [-3.74922, 40.463667],
+            "Brazil": [-51.9253, -14.2350],
+            "Norway": [8.4689, 60.4720],
+            "Bulgaria": [25.4858, 42.7339],
+            "Mexico": [-102.5528, 23.6345],
+            "Finland": [25.7482, 61.9241],
+            "Portugal": [-8.2245, 39.3999],
+            "Saudi Arabia": [45.0792, 23.8859],
+            "Thailand": [100.9925, 15.8700],
+            "Malaysia": [101.9758, 4.2105],
+            "Azerbaijan": [47.5769, 40.1431],
+            "Greece": [21.8243, 39.0742],
+            "Estonia": [25.0136, 58.5953],
+            "Poland": [19.1451, 51.9194]
+        };
+
+        d3.csv('ESport_Earnings.csv').then(function (data) {
+            data.forEach(d => {
+                d.PlayerNo = +d.PlayerNo;
+                d.TournamentNo = +d.TournamentNo;
+                d.TotalMoney = +d.TotalMoney;
+                d.Scaled_PlayerNo = d.PlayerNo;
+                d.Releaseyear = new Date(d.Releaseyear);
+                const coordinates = countryCoordinates[d.Top_Country];
+                if (coordinates) {
+                    d.lon = coordinates[0];
+                    d.lat = coordinates[1];
+                }
+            });
+
+            const margin = { top: 20, right: 30, bottom: 40, left: 90 },
+                width = 960 - margin.left - margin.right,
+                height = 700 - margin.top - margin.bottom;
+
+            const svg = d3.select("#map").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const projection = d3.geoNaturalEarth1()
+                .scale(200)
+                .translate([width / 2, height / 2]);
+
+            const path = d3.geoPath().projection(projection);
+
+            const zoom = d3.zoom()
+                .scaleExtent([1, 8])
+                .on("zoom", zoomed);
+
+            svg.call(zoom);
+
+            function zoomed(event) {
+                const { transform } = event;
+                g.attr("transform", transform);
+                g.selectAll(".bubble")
+                    .attr("r", d => Math.sqrt(d.Scaled_PlayerNo * 1.5) / transform.k)
+            }
+
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            d3.json("https://d3js.org/world-110m.v1.json").then(function (world) {
+                g.append("g")
+                    .selectAll("path")
+                    .data(topojson.feature(world, world.objects.countries).features)
+                    .join("path")
+                    .attr("class", "country")
+                    .attr("d", path);
+
+                const colorScale = d3.scaleSequential(d3.interpolatePlasma)
+                    .domain([0, d3.max(data, d => d.TournamentNo)]);
+
+                const bubbles = g.append("g")
+                    .selectAll(".bubble")
+                    .data(data.filter(d => d.lon && d.lat))
+                    .join("circle")
+                    .attr("class", "bubble")
+                    .attr("cx", d => projection([d.lon, d.lat])[0])
+                    .attr("cy", d => projection([d.lon, d.lat])[1])
+                    .attr("r", d => Math.sqrt(d.Scaled_PlayerNo))
+                    .attr("fill", d => colorScale(d.TournamentNo))
+                    .attr("stroke", "black")
+                    .attr("stroke-width", "1px")
+                    .on("mouseover", function (event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(`${d.GameName}<br/>Earnings: $${d.TotalMoney.toLocaleString()}<br/>Tournaments: ${d.TournamentNo}<br/>Players: ${d.PlayerNo}`)
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function (d) {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+
+                g.selectAll(".bubble")
+                    .on("click", function (event, d) {
+                        onClick(d);
+                    });
+
+                const countries = Array.from(new Set(data.map(d => d.Top_Country).filter(c => c)));
+                const countrySelect = d3.select("#countrySelect");
+                countries.forEach(country => {
+                    countrySelect.append("option")
+                        .attr("value", country)
+                        .text(country);
+                });
+
+                countrySelect.on("change", function () {
+                    const selectedCountry = this.value;
+                    updateCharts(selectedCountry === "all" ? data : data.filter(d => d.Top_Country === selectedCountry));
+                });
+
+                const chartSelect = d3.select("#chartSelect");
+                chartSelect.on("change", function () {
+                    const selectedChart = this.value;
+                    d3.selectAll(".chart-container").style("display", "none");
+                    d3.select(`#${selectedChart}`).style("display", "block");
+                });
+
+                updateCharts(data);
+                d3.select("#chart1").style("display", "block");
+            });
+
+            function onClick(d) {
+                var a, b, c;
+
+                var centroid = projection([d.lon, d.lat]);
+                a = centroid[0];
+                b = centroid[1];
+                c = 4;
+
+                svg.transition()
+                    .duration(1000)
+                    .call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                            .translate(width / 2, height / 2)
+                            .scale(c)
+                            .translate(-a, -b)
+                    );
+
+                d3.select("#info").html(`Country: ${d.Top_Country} <br/> Game: ${d.GameName} <br/> Earnings: $${d.TotalMoney.toLocaleString()} <br/> Tournaments: ${d.TournamentNo} <br/> Players: ${d.PlayerNo}`);
+
+                setTimeout(function () {
+                    svg.transition()
+                        .duration(1000)
+                        .call(zoom.transform, d3.zoomIdentity);
+                    d3.select("#info").html("");
+                }, 3000);
+            }
+
+            function updateCharts(data) {
+                const genreCounts = d3.rollup(data, v => v.length, d => d.Genre);
+                const genreData = Array.from(genreCounts, ([key, value]) => ({ key, value }));
+                renderBarChart("#chart1", genreData, "Genre", "Number of Games", "Distribution of Games by Genre");
+
+                const moneyData = data.map(d => d.TotalMoney);
+                renderHistogram("#chart2", moneyData, "Total Money", "Frequency", "Distribution of Total Money Across Games");
+
+                const yearlyCounts = d3.rollup(data, v => v.length, d => d.Releaseyear.getFullYear());
+                const yearlyData = Array.from(yearlyCounts, ([key, value]) => ({ key, value }));
+                renderLineChart("#chart3", yearlyData, "Year", "Number of Games Released", "Trends in Game Releases Over the Years");
+
+                const topGames = data.sort((a, b) => b.TotalMoney - a.TotalMoney).slice(0, 20);
+                const topCountries = d3.rollup(topGames, v => v.length, d => d.Top_Country);
+                const topCountriesData = Array.from(topCountries, ([key, value]) => ({ key, value }));
+                renderPieChart("#chart4", topCountriesData, "Country Representation for the Most Popular Games");
+
+                const scatterData = data.map(d => ({ x: d.TournamentNo, y: d.TotalMoney }));
+                renderScatterPlot("#chart5", scatterData, "Number of Tournaments", "Total Earnings", "Tournaments vs Earnings");
+            }
+
+            function renderBarChart(selector, data, xLabel, yLabel, title) {
+                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                    margin = { top: 50, right: 100, bottom: 200, left: 30 },
+                    width = +svg.attr("width") - margin.left - margin.right,
+                    height = +svg.attr("height") - margin.top - margin.bottom,
+                    g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+                const x = d3.scaleBand().rangeRound([0, width]).padding(0.1).domain(data.map(d => d.key)),
+                    y = d3.scaleLinear().rangeRound([height, 0]).domain([0, d3.max(data, d => d.value)]);
+
+                g.append("g")
+                    .selectAll(".bar")
+                    .data(data)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.key))
+                    .attr("y", d => y(d.value))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => height - y(d.value));
+
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("y", 0)
+                    .attr("x", 9)
+                    .attr("dy", ".35em")
+                    .attr("transform", "rotate(45)")
+                    .style("text-anchor", "start");
+
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(y))
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "0.71em")
+                    .attr("text-anchor", "end")
+                    .text(yLabel);
+
+                svg.append("text")
+                    .attr("x", (width + margin.left + margin.right) / 2)
+                    .attr("y", margin.top / 2)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text(title);
+            }
+
+            function renderHistogram(selector, data, xLabel, yLabel, title) {
+                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                    margin = { top: 50, right: 100, bottom: 200, left: 30 },
+                    width = +svg.attr("width") - margin.left - margin.right,
+                    height = +svg.attr("height") - margin.top - margin.bottom,
+                    g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+                const x = d3.scaleLinear().domain(d3.extent(data)).nice().range([0, width]),
+                    bins = d3.histogram().domain(x.domain()).thresholds(x.ticks(30))(data),
+                    y = d3.scaleLinear().domain([0, d3.max(bins, d => d.length)]).nice().range([height, 0]);
+
+                g.append("g")
+                    .selectAll("rect")
+                    .data(bins)
+                    .enter().append("rect")
+                    .attr("x", d => x(d.x0) + 1)
+                    .attr("y", d => y(d.length))
+                    .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+                    .attr("height", d => height - y(d.length))
+                    .attr("fill", "steelblue");
+
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x));
+
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(y))
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "0.71em")
+                    .attr("text-anchor", "end")
+                    .text(yLabel);
+
+                svg.append("text")
+                    .attr("x", (width + margin.left + margin.right) / 2)
+                    .attr("y", margin.top / 2)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text(title);
+            }
+
+            function renderLineChart(selector, data, xLabel, yLabel, title) {
+                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                    margin = { top: 50, right: 50, bottom: 50, left: 50 },
+                    width = +svg.attr("width") - margin.left - margin.right,
+                    height = +svg.attr("height") - margin.top - margin.bottom,
+                    g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+
+                data.sort((a, b) => d3.ascending(a.key, b.key));
+
+                const x = d3.scaleLinear().domain(d3.extent(data, d => d.key)).range([0, width]),
+                    y = d3.scaleLinear().domain([0, d3.max(data, d => d.value)]).nice().range([height, 0]);
+
+                const line = d3.line()
+                    .x(d => x(d.key))
+                    .y(d => y(d.value));
+
+                g.append("path")
+                    .datum(data)
+                    .attr("fill", "none")
+                    .attr("stroke", "steelblue")
+                    .attr("stroke-linejoin", "round")
+                    .attr("stroke-linecap", "round")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", line);
+
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(y))
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "0.71em")
+                    .attr("text-anchor", "end")
+                    .text(yLabel);
+
+                g.selectAll(".dot")
+                    .data(data)
+                    .enter().append("circle")
+                    .attr("class", "dot")
+                    .attr("cx", d => x(d.key))
+                    .attr("cy", d => y(d.value))
+                    .attr("r", 3)
+                    .attr("fill", "steelblue");
+
+                svg.append("text")
+                    .attr("x", (width + margin.left + margin.right) / 2)
+                    .attr("y", margin.top / 2)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text(title);
+            }
+
+            function renderPieChart(selector, data, title) {
+                const svg = d3.select(selector).html("").append("svg").attr("width", 400).attr("height", 400),
+                    width = +svg.attr("width"),
+                    height = +svg.attr("height"),
+                    radius = Math.min(width, height) / 2,
+                    g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
+
+                const color = d3.scaleOrdinal(d3.schemeCategory10),
+                    pie = d3.pie().sort(null).value(d => d.value),
+                    path = d3.arc().outerRadius(radius - 10).innerRadius(0),
+                    label = d3.arc().outerRadius(radius - 40).innerRadius(radius - 40);
+
+                const arc = g.selectAll(".arc")
+                    .data(pie(data))
+                    .enter().append("g")
+                    .attr("class", "arc");
+
+                arc.append("path")
+                    .attr("d", path)
+                    .attr("fill", d => color(d.data.key));
+
+                arc.append("text")
+                    .attr("transform", d => `translate(${label.centroid(d)})`)
+                    .attr("dy", "0.35em")
+                    .text(d => d.data.key);
+
+                svg.append("text")
+                    .attr("x", width / 2)
+                    .attr("y", 20)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text(title);
+            }
+
+            function renderScatterPlot(selector, data, xLabel, yLabel, title) {
+                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                    margin = { top: 50, right: 100, bottom: 200, left: 30 },
+                    width = +svg.attr("width") - margin.left - margin.right,
+                    height = +svg.attr("height") - margin.top - margin.bottom,
+                    g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+                const x = d3.scaleLinear().range([0, width]).domain(d3.extent(data, d => d.x)).nice(),
+                    y = d3.scaleLinear().range([height, 0]).domain(d3.extent(data, d => d.y)).nice();
+
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x));
+
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(y))
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "0.71em")
+                    .attr("text-anchor", "end")
+                    .text(yLabel);
+
+                g.append("g")
+                    .selectAll("circle")
+                    .data(data)
+                    .enter().append("circle")
+                    .attr("cx", d => x(d.x))
+                    .attr("cy", d => y(d.y))
+                    .attr("r", 3)
+                    .attr("fill", "steelblue");
+
+                svg.append("text")
+                    .attr("x", (width + margin.left + margin.right) / 2)
+                    .attr("y", margin.top / 2)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text(title);
+            }
+        });
+    </script>
+</body>
+
+</html>

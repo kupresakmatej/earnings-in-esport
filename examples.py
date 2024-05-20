@@ -72,3 +72,9 @@ fig = px.scatter_geo(data, locations='Top_Country', locationmode='country names'
                      size_max=100)  # Adjust the maximum size to make bubbles larger
 
 fig.show()
+
+# Extract unique country names
+unique_countries = data['Top_Country'].unique()
+
+# Pretty-print the list of unique countries
+print(unique_countries)
