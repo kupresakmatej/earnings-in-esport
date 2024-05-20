@@ -149,7 +149,7 @@
                     .attr("class", "bubble")
                     .attr("cx", d => projection([d.lon, d.lat])[0])
                     .attr("cy", d => projection([d.lon, d.lat])[1])
-                    .attr("r", d => Math.sqrt(d.Scaled_PlayerNo))
+                    .attr("r", d => Math.sqrt(d.TotalMoney / 10000))
                     .attr("fill", d => colorScale(d.TournamentNo))
                     .attr("stroke", "black")
                     .attr("stroke-width", "1px")
