@@ -1,47 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-------------------------DODAJ USPOREDBE ZA VIŠE DRŽAVAAAAAAAAAAA--------------------------->
-
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Impact of Tournaments, Players, and Earnings Globally</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script src="https://unpkg.com/topojson@3"></script>
     <style>
         body {
-            display: flex;
-            flex-direction: row;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 1em;
         }
 
         #map {
-            width: 70%;
-            border: 2px solid black;
+            width: 75em;
+            border: 2px solid #ddd;
+            background-color: #fff;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         #charts {
-            width: 40%;
-            padding: 10px;
+            width: 80%;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
         }
 
-        .bubble {
-            opacity: 0.7;
-            stroke: black;
-            stroke-width: 1px;
+        .chart-container {
+            width: 40em;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
 
-        .country {
-            fill: #e0e0e0;
-            stroke: #fff;
-            stroke-width: 0.5px;
-        }
-
-        #info {
-            position: absolute;
-            left: 10px;
-            top: 10px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
+        select {
+            padding: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
             border-radius: 5px;
         }
 
@@ -57,42 +75,52 @@
             pointer-events: none;
         }
 
-        #controls {
-            margin-bottom: 20px;
+        .country {
+            fill: #fff;
+            stroke: black;
         }
 
-        .chart-container {
-            display: none;
+        .info-div {
+            position: absolute;
+            background-color: lightsteelblue;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-    <div id="controls">
-        <label for="countrySelect">Select Country:</label>
-        <br>
+    <header>
+        <h1>Impact of Tournaments, Players, and Earnings Globally</h1>
+    </header>
+
+    <div id="controls" style="text-align: center;">
+        <label for="countrySelect" class="select-country-text">Select Country:</label><br>
         <select id="countrySelect">
             <option value="all">All</option>
-        </select>
-        <br>
+        </select><br>
         <label for="chartSelect">Select Chart:</label>
         <select id="chartSelect">
             <option value="chart1">Distribution of Games by Genre</option>
             <option value="chart2">Distribution of Total Money Across Games</option>
             <option value="chart3">Trends in Game Releases Over the Years</option>
-            <option value="chart4">Country Representation for the Most Popular Games</option>
-            <option value="chart5">Tournaments vs Earnings</option>
+            <option value="chart4">Tournaments vs Earnings</option>
         </select>
     </div>
-    <div id="map"></div>
+
+    <div id="map">
+        <div id="info" class="info-div"></div>
+    </div>
+
     <div id="charts">
         <div id="chart1" class="chart-container"></div>
         <div id="chart2" class="chart-container"></div>
         <div id="chart3" class="chart-container"></div>
         <div id="chart4" class="chart-container"></div>
-        <div id="chart5" class="chart-container"></div>
     </div>
-    <div id="info"></div>
+
     <script>
         const countryCoordinates = {
             "United States": [-95.7129, 37.0902],
@@ -144,7 +172,7 @@
             });
 
             const margin = { top: 20, right: 30, bottom: 40, left: 90 },
-                width = 960 - margin.left - margin.right,
+                width = 1200 - margin.left - margin.right,
                 height = 700 - margin.top - margin.bottom;
 
             const svg = d3.select("#map").append("svg")
@@ -175,7 +203,7 @@
 
             const tooltip = d3.select("body").append("div")
                 .attr("class", "tooltip")
-                .style("opacity", 0);
+                .style("opacity", 1);
 
             d3.json("https://d3js.org/world-110m.v1.json").then(function (world) {
                 g.append("g")
@@ -282,17 +310,12 @@
                 const yearlyData = Array.from(yearlyCounts, ([key, value]) => ({ key, value }));
                 renderLineChart("#chart3", yearlyData, "Year", "Number of Games Released", "Trends in Game Releases Over the Years");
 
-                const topGames = data.sort((a, b) => b.TotalMoney - a.TotalMoney).slice(0, 20);
-                const topCountries = d3.rollup(topGames, v => v.length, d => d.Top_Country);
-                const topCountriesData = Array.from(topCountries, ([key, value]) => ({ key, value }));
-                renderPieChart("#chart4", topCountriesData, "Country Representation for the Most Popular Games");
-
                 const scatterData = data.map(d => ({ x: d.TournamentNo, y: d.TotalMoney }));
-                renderScatterPlot("#chart5", scatterData, "Number of Tournaments", "Total Earnings", "Tournaments vs Earnings");
+                renderScatterPlot("#chart4", scatterData, "Number of Tournaments", "Total Earnings", "Tournaments vs Earnings");
             }
 
             function renderBarChart(selector, data, xLabel, yLabel, title) {
-                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                const svg = d3.select(selector).html("").append("svg").attr("width", 680).attr("height", 650),
                     margin = { top: 50, right: 100, bottom: 200, left: 30 },
                     width = +svg.attr("width") - margin.left - margin.right,
                     height = +svg.attr("height") - margin.top - margin.bottom,
@@ -342,7 +365,7 @@
             }
 
             function renderHistogram(selector, data, xLabel, yLabel, title) {
-                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                const svg = d3.select(selector).html("").append("svg").attr("width", 680).attr("height", 650),
                     margin = { top: 50, right: 100, bottom: 200, left: 30 },
                     width = +svg.attr("width") - margin.left - margin.right,
                     height = +svg.attr("height") - margin.top - margin.bottom,
@@ -365,7 +388,15 @@
                 g.append("g")
                     .attr("class", "axis axis--x")
                     .attr("transform", `translate(0,${height})`)
-                    .call(d3.axisBottom(x));
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("y", 0)
+                    .attr("x", 9)
+                    .attr("dy", ".35em")
+                    .attr("transform", "rotate(90)")
+                    .style("text-anchor", "start")
+                    .style("font-size", "12px");
+
 
                 g.append("g")
                     .attr("class", "axis axis--y")
@@ -387,7 +418,7 @@
             }
 
             function renderLineChart(selector, data, xLabel, yLabel, title) {
-                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
+                const svg = d3.select(selector).html("").append("svg").attr("width", 670).attr("height", 650),
                     margin = { top: 50, right: 50, bottom: 50, left: 50 },
                     width = +svg.attr("width") - margin.left - margin.right,
                     height = +svg.attr("height") - margin.top - margin.bottom,
@@ -445,44 +476,9 @@
                     .text(title);
             }
 
-            function renderPieChart(selector, data, title) {
-                const svg = d3.select(selector).html("").append("svg").attr("width", 400).attr("height", 400),
-                    width = +svg.attr("width"),
-                    height = +svg.attr("height"),
-                    radius = Math.min(width, height) / 2,
-                    g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
-
-                const color = d3.scaleOrdinal(d3.schemeCategory10),
-                    pie = d3.pie().sort(null).value(d => d.value),
-                    path = d3.arc().outerRadius(radius - 10).innerRadius(0),
-                    label = d3.arc().outerRadius(radius - 40).innerRadius(radius - 40);
-
-                const arc = g.selectAll(".arc")
-                    .data(pie(data))
-                    .enter().append("g")
-                    .attr("class", "arc");
-
-                arc.append("path")
-                    .attr("d", path)
-                    .attr("fill", d => color(d.data.key));
-
-                arc.append("text")
-                    .attr("transform", d => `translate(${label.centroid(d)})`)
-                    .attr("dy", "0.35em")
-                    .text(d => d.data.key);
-
-                svg.append("text")
-                    .attr("x", width / 2)
-                    .attr("y", 20)
-                    .attr("text-anchor", "middle")
-                    .style("font-size", "16px")
-                    .style("font-weight", "bold")
-                    .text(title);
-            }
-
             function renderScatterPlot(selector, data, xLabel, yLabel, title) {
-                const svg = d3.select(selector).html("").append("svg").attr("width", 600).attr("height", 650),
-                    margin = { top: 50, right: 100, bottom: 200, left: 30 },
+                const svg = d3.select(selector).html("").append("svg").attr("width", 680).attr("height", 650),
+                    margin = { top: 50, right: 100, bottom: 200, left: 80 },
                     width = +svg.attr("width") - margin.left - margin.right,
                     height = +svg.attr("height") - margin.top - margin.bottom,
                     g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
