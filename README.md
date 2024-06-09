@@ -1,4 +1,4 @@
-# Project Title
+# Earnings in esport
 
 ### Upute za postavljanje.
 - Klonirajte projekt sa GitHuba - https://github.com/kupresakmatej/earnings-in-esport
