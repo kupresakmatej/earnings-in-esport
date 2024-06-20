@@ -223,8 +223,9 @@
                     .attr("class", "bubble")
                     .attr("cx", d => projection([d.lon, d.lat])[0])
                     .attr("cy", d => projection([d.lon, d.lat])[1])
-                    .attr("r", d => Math.sqrt(d.Scaled_PlayerNo))
+                    .attr("r", d => Math.sqrt(d.TournamentNo))
                     .attr("fill", d => colorScale(d.TournamentNo))
+                    .attr("fill-opacity", 0.5)  // Adjust opacity here
                     .attr("stroke", "black")
                     .attr("stroke-width", "1px")
                     .on("mouseover", function (event, d) {
@@ -299,18 +300,18 @@
             }
 
             function updateCharts(data) {
-                const genreCounts = d3.rollup(data, v => v.length, d => d.Genre);
-                const genreData = Array.from(genreCounts, ([key, value]) => ({ key, value }));
+                const genreCounts = d3.rollup(data, v => v.length, d => d.Genre); //grupira podatke
+                const genreData = Array.from(genreCounts, ([key, value]) => ({ key, value })); //vraca dictionary podataka
                 renderBarChart("#chart1", genreData, "Genre", "Number of Games", "Distribution of Games by Genre");
 
-                const moneyData = data.map(d => d.TotalMoney);
+                const moneyData = data.map(d => d.TotalMoney); //vratit ce samo total money
                 renderHistogram("#chart2", moneyData, "Total Money", "Frequency", "Distribution of Total Money Across Games");
 
-                const yearlyCounts = d3.rollup(data, v => v.length, d => d.Releaseyear.getFullYear());
-                const yearlyData = Array.from(yearlyCounts, ([key, value]) => ({ key, value }));
+                const yearlyCounts = d3.rollup(data, v => v.length, d => d.Releaseyear.getFullYear()); //broj igara po godini
+                const yearlyData = Array.from(yearlyCounts, ([key, value]) => ({ key, value })); //key value, godina i broj igara
                 renderLineChart("#chart3", yearlyData, "Year", "Number of Games Released", "Trends in Game Releases Over the Years");
 
-                const scatterData = data.map(d => ({ x: d.TournamentNo, y: d.TotalMoney }));
+                const scatterData = data.map(d => ({ x: d.TournamentNo, y: d.TotalMoney })); //broj turnira i ukupna zarada
                 renderScatterPlot("#chart4", scatterData, "Number of Tournaments", "Total Earnings", "Tournaments vs Earnings");
             }
 
@@ -331,7 +332,7 @@
                     .attr("class", "bar")
                     .attr("x", d => x(d.key))
                     .attr("y", d => y(d.value))
-                    .attr("width", x.bandwidth())
+                    .attr("width", x.bandwidth()) //iz scaleBand, podijelit ce ravnomjerno sve
                     .attr("height", d => height - y(d.value));
 
                 g.append("g")
